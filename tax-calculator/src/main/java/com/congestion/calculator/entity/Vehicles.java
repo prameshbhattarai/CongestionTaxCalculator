@@ -5,13 +5,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.List;
 
 @Entity
-@Table(name = "city")
+@Table(name = "vehicles")
 @NoArgsConstructor
 @Data
-public class City implements Serializable {
+public class Vehicles implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -20,6 +19,7 @@ public class City implements Serializable {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @OneToMany(mappedBy = "city", fetch = FetchType.LAZY)
-    private List<TollFees> tollFees;
+    @Column(name = "is_tax_exempt", nullable = false)
+    private boolean isTaxExempt;
+
 }

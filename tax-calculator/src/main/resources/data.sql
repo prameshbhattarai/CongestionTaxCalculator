@@ -1,3 +1,11 @@
+-- insert value in vehicles table
+INSERT INTO vehicles (id, name, is_tax_exempt)
+VALUES
+(1, 'Motorcycle', true),
+(2, 'Tractor', true),
+(3, 'Emergency', true)
+ON CONFLICT DO NOTHING;
+
 -- insert value in city table
 INSERT INTO city (id, name)
 VALUES
@@ -6,7 +14,7 @@ VALUES
 (3, 'Malmo')
 ON CONFLICT DO NOTHING;
 
--- insert value in toll fees
+-- insert value in toll fees for Gothenborg city
 INSERT INTO toll_fees (id, city_id, from_hour, from_minute, to_hour, to_minute, rate)
 VALUES
 (1, 1, 6, 0, 6, 29, 8),
