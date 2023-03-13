@@ -20,6 +20,12 @@ public class City implements Serializable {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "max_taxable_amount", nullable = false)
+    private Double maxTaxableAmount;
+
+    @Column(name = "single_charge_time", nullable = false)
+    private Integer singleChargeTime;
+
     @OneToMany(mappedBy = "city", fetch = FetchType.LAZY)
     private List<TollFees> tollFees;
 }

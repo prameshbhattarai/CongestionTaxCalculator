@@ -2,7 +2,7 @@ package com.congestion.calculator.model;
 
 import java.io.Serializable;
 
-public record TollFees(
+public record TollFeesResponse(
         String cityName,
         int fromHour,
         int fromMinute,

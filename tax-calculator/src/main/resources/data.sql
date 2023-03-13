@@ -7,11 +7,11 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- insert value in city table
-INSERT INTO city (id, name)
+INSERT INTO city (id, name, max_taxable_amount, single_charge_time)
 VALUES
-(1, 'Gothenborg'),
-(2, 'Stockholm'),
-(3, 'Malmo')
+(1, 'Gothenborg', 60, 60),
+(2, 'Stockholm', 80, 60),
+(3, 'Malmo', 50, 60)
 ON CONFLICT DO NOTHING;
 
 -- insert value in toll fees for Gothenborg city
@@ -28,4 +28,24 @@ VALUES
 (9, 1, 18, 00, 18, 29, 8),
 (10, 1, 18, 30, 23, 0, 0),
 (11, 1, 0, 0, 5, 59, 0)
+ON CONFLICT DO NOTHING;
+
+-- insert value in holidays table
+INSERT INTO holidays (id, month, day)
+VALUES
+(1, 1, 1),
+(2, 3, 28),
+(3, 3, 29),
+(4, 4, 1),
+(5, 4, 30),
+(5, 5, 1),
+(5, 5, 8),
+(5, 5, 9),
+(6, 6, 5),
+(6, 6, 6),
+(6, 11, 1),
+(6, 12, 24),
+(6, 12, 25),
+(6, 12, 26),
+(6, 12, 31)
 ON CONFLICT DO NOTHING;

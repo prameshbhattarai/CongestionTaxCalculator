@@ -1,7 +1,7 @@
 package com.congestion.calculator.controller;
 
-import com.congestion.calculator.model.TollFees;
-import com.congestion.calculator.service.TaxCalculatorService;
+import com.congestion.calculator.model.TollFeesResponse;
+import com.congestion.calculator.service.TollFeesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,15 +10,15 @@ import java.util.Collection;
 @RestController
 @RequestMapping("toll-fees")
 public class TollFeesController {
-    private final TaxCalculatorService taxCalculatorService;
+    private final TollFeesService tollFeesService;
 
     @Autowired
-    public TollFeesController(TaxCalculatorService taxCalculatorService) {
-        this.taxCalculatorService = taxCalculatorService;
+    public TollFeesController(TollFeesService tollFeesService) {
+        this.tollFeesService = tollFeesService;
     }
 
     @GetMapping("/{cityId}")
-    public Collection<TollFees> getTollFeesByCity(@PathVariable("cityId") Long cityId, @RequestParam(value = "vehicleId", required = false) Long vehicleId) {
-        return taxCalculatorService.getTollFeesByCityAndVehicle(cityId, vehicleId);
+    public Collection<TollFeesResponse> getTollFeesByCity(@PathVariable("cityId") Long cityId, @RequestParam(value = "vehicleId", required = false) Long vehicleId) {
+        return tollFeesService.getTollFeesByCityAndVehicle(cityId, vehicleId);
     }
 }
