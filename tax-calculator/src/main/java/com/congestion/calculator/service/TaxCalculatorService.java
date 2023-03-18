@@ -1,9 +1,12 @@
 package com.congestion.calculator.service;
 
+import com.congestion.calculator.entity.City;
+import com.congestion.calculator.entity.Holidays;
+import com.congestion.calculator.entity.TollFees;
 import com.congestion.calculator.exception.NotFoundException;
 import com.congestion.calculator.model.CalculateTaxRequest;
-import com.congestion.calculator.model.TollFeesResponse;
 import com.congestion.calculator.repository.CityRepository;
+import com.congestion.calculator.repository.HolidayRepository;
 import com.congestion.calculator.repository.TollFeesRepository;
 import com.congestion.calculator.repository.VehiclesRepository;
 import lombok.NoArgsConstructor;
@@ -11,9 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
 @NoArgsConstructor
@@ -21,90 +22,160 @@ import java.util.stream.Collectors;
 public class TaxCalculatorService {
 
     private TollFeesRepository tollFeesRepository;
+    private HolidayRepository holidayRepository;
     private CityRepository cityRepository;
     private VehiclesRepository vehiclesRepository;
 
     @Autowired
-    public TaxCalculatorService(TollFeesRepository tollFeesRepository, CityRepository cityRepository, VehiclesRepository vehiclesRepository) {
+    public TaxCalculatorService(TollFeesRepository tollFeesRepository, HolidayRepository holidayRepository, CityRepository cityRepository, VehiclesRepository vehiclesRepository) {
         this.tollFeesRepository = tollFeesRepository;
+        this.holidayRepository = holidayRepository;
         this.cityRepository = cityRepository;
         this.vehiclesRepository = vehiclesRepository;
     }
 
     public Double calculateTax(CalculateTaxRequest calculateTaxRequest) {
-        var vehicleId = calculateTaxRequest.getVehicleId();
+        var vehicleName = calculateTaxRequest.getVehicleName();
         var cityId = calculateTaxRequest.getCityId();
-        var dates = calculateTaxRequest.getDates();
-
         var noTaxValue = 0.0;
 
         // check if vehicle is tax free or not
-        if (vehicleId != null && vehicleId > 0) {
-            var vehicle = vehiclesRepository.findById(vehicleId);
-            if (vehicle.isEmpty()) {
-                var errorMessage = String.format("Unable to find vehicle with id %s.", vehicleId);
-                log.info(errorMessage);
-                throw new NotFoundException(errorMessage);
-            }
-            if (vehicle.get().isTaxExempt()) {
-                log.info(String.format("TaxCalculatorService::getTollFeesByCity: %s is tax free.", vehicle.get().getName()));
-                return noTaxValue;
-            }
-        }
+        var isVehicleTaxFree = isVehicleTaxFree(vehicleName);
+        if (isVehicleTaxFree) return noTaxValue;
 
-        // check if city exists or not
-        var city = cityRepository.findById(cityId);
-        if (city.isEmpty()) {
-            var errorMessage = String.format("Unable to find city with id %s.", vehicleId);
-            log.info(errorMessage);
-            throw new NotFoundException(errorMessage);
-        }
-        var cityName = city.get().getName();
-        var tollFees = tollFeesRepository.getTollFeesByCity_Id(city.get().getId());
+        // check if city exist of not
+        var city = getCityById(cityId);
+        var tollFees = tollFeesRepository.getTollFeesByCity_Id(city.getId());
         if (tollFees.isEmpty()) {
-            log.info(String.format("TaxCalculatorService::getTollFeesByCity: Unable to find toll fees for city %s", cityName));
+            log.info(String.format("TaxCalculatorService::getTollFeesByCity: Unable to find toll fees for city %s", city.getName()));
             return noTaxValue;
         }
 
-        // todo now calculate the tax..
-        return null;
+        // sort the dates from request
+        calculateTaxRequest.setDates(calculateTaxRequest.getDates().stream().sorted().toList());
+        Map<String, List<Date>> eachDayEntries = mapEachDayEntries(calculateTaxRequest.getDates());
+        return calculateTotalTax(eachDayEntries, city);
     }
 
-    public Collection<TollFeesResponse> getTollFeesByCityAndVehicle(Long cityId, Long vehicleId) {
-        var emptyResponse = new ArrayList<TollFeesResponse>();
+    private double calculateTotalTax(Map<String, List<Date>> eachDayEntries, City city) {
+        int totalTax = 0;
+        for (Map.Entry<String, List<Date>> entry : eachDayEntries.entrySet()) {
+            double tax = calculateEachDayTax(entry.getValue(), city);
+            System.out.println("each day tax " + entry.getKey() + "  value " + tax);
+            totalTax += tax;
+        }
+        return totalTax;
+    }
 
-        if (vehicleId != null && vehicleId > 0) {
-            var vehicle = vehiclesRepository.findById(vehicleId);
-            if (vehicle.isPresent() && vehicle.get().isTaxExempt()) {
-                log.info(String.format("TaxCalculatorService::getTollFeesByCity: %s is tax free.", vehicle.get().getName()));
-                return emptyResponse;
+    private double calculateEachDayTax(List<Date> dates, City city) {
+        if (dates.isEmpty()) return 0.0;
+
+        int tax = 0;
+        Date entryTime = dates.get(0);
+        tax += getTollEntryFee(entryTime, city);
+
+        for (int i = 1; i < dates.size(); i++) {
+            Date nextEntryTime = dates.get(i);
+            // if nextEntryTime is less than SINGLE_CHARGE_TIME, then we will not add nexEntryTime charge
+            // if nextEntryTime is greater than SINGLE_CHARGE_TIME, then only we will add tax
+            long diffInMinutes = (nextEntryTime.getTime() - entryTime.getTime()) / 1000 / 60;
+            if (diffInMinutes > city.getSingleChargeTime()) {
+                tax += getTollEntryFee(nextEntryTime, city);
+                entryTime = nextEntryTime;
+            }
+
+            // if tax amount reach the max taxable amount per day
+            // then return max taxable amount
+            if (tax > city.getMaxTaxableAmount()) {
+                return  city.getMaxTaxableAmount();
             }
         }
+        return tax;
+    }
 
+    public double getTollEntryFee(Date date, City city) {
+        if (isTollFreeDate(date)) return 0;
+
+        Collection<TollFees> tollFees = tollFeesRepository.getTollFeesByCity_Id(city.getId());
+
+        for (TollFees tollFee : tollFees) {
+
+            int fromHour = tollFee.getFromHour();
+            int fromMinute = tollFee.getFromMinute();
+            int toHour = tollFee.getToHour();
+            int toMinute = tollFee.getToMinute();
+            double rate = tollFee.getRate();
+
+            Calendar fromDate = Calendar.getInstance();
+            fromDate.set(Calendar.HOUR, fromHour);
+            fromDate.set(Calendar.MINUTE, fromMinute);
+
+            Calendar toDate = Calendar.getInstance();
+            toDate.set(Calendar.HOUR, toHour);
+            toDate.set(Calendar.MINUTE,toMinute);
+
+            Calendar entryDate = Calendar.getInstance();
+
+            // entry dates calculation are inclusive
+            if ((entryDate.after(fromDate) || entryDate.equals(fromDate)) &&
+                    (entryDate.before(toDate) || entryDate.equals(toDate))) {
+                return rate;
+            }
+        }
+        return 0;
+    }
+
+    private boolean isTollFreeDate(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        int month = calendar.get(Calendar.MONTH) + 1; // MONTH starts from 0 i.e. January
+        int day = calendar.get(Calendar.DAY_OF_WEEK); // DAY_OF_WEEK starts from 1 i.e. SUNDAY
+        int dayOfMonth = calendar.get(Calendar.DATE);
+
+        if (day == Calendar.SATURDAY || day == Calendar.SUNDAY) {
+            return true;
+        }
+
+        Holidays holidays = holidayRepository.getHolidaysByMonthAndAndDay(month, dayOfMonth);
+        return (holidays != null);
+    }
+
+     private Map<String, List<Date>> mapEachDayEntries(List<Date> dates) {
+        var entryByDates = new HashMap<String, List<Date>>();
+
+        dates.forEach((date) -> {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(date);
+            StringBuilder key = new StringBuilder().append(calendar.get(Calendar.YEAR)).append(calendar.get(Calendar.MONTH)).append(calendar.get(Calendar.DATE));
+            List<Date> sameDate = entryByDates.getOrDefault(key.toString(), new ArrayList<>());
+            sameDate.add(date);
+            entryByDates.put(key.toString(), sameDate);
+        });
+
+        return entryByDates;
+    }
+
+    private City getCityById(long cityId) {
         var city = cityRepository.findById(cityId);
-        if (city.isPresent()) {
-            var cityName = city.get().getName();
-            var tollFees = tollFeesRepository.getTollFeesByCity_Id(city.get().getId());
-            if (tollFees.isEmpty()) {
-                log.info(String.format("TaxCalculatorService::getTollFeesByCity: Unable to find toll fees for city %s", cityName));
-                return emptyResponse;
-            }
-            return mapToDto(tollFees);
-        } else {
-            log.info(String.format("TaxCalculatorService::getTollFeesByCity: Unable to find city with id %s.", cityId));
+        if (city.isEmpty()) {
+            var errorMessage = String.format("Unable to find city with id %s.", cityId);
+            log.info(errorMessage);
+            throw new NotFoundException(errorMessage);
         }
-        return emptyResponse;
+        return city.get();
     }
 
-    private Collection<TollFeesResponse> mapToDto(Collection<com.congestion.calculator.entity.TollFees> tollFees) {
-        return tollFees.stream().map((tollFee) -> new TollFeesResponse(
-                        tollFee.getCity().getName(),
-                        tollFee.getFromHour(),
-                        tollFee.getFromMinute(),
-                        tollFee.getToHour(),
-                        tollFee.getToMinute(),
-                        tollFee.getRate()
-                )
-        ).collect(Collectors.toList());
+    private boolean isVehicleTaxFree(String vehicleName) {
+        if (vehicleName != null && !vehicleName.isEmpty()) {
+            var vehicle = vehiclesRepository.getVehicleByName(vehicleName);
+            if (vehicle.isEmpty()) {
+                var errorMessage = String.format("Unable to find vehicle with name %s.", vehicleName);
+                log.info(errorMessage);
+                throw new NotFoundException(errorMessage);
+            }
+            return vehicle.get().isTaxExempt();
+        }
+        return false;
     }
 }

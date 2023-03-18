@@ -13,13 +13,12 @@ import java.util.List;
 @NoArgsConstructor
 public class CalculateTaxRequest {
 
-    // todo instead of searching by vehicleId, search by vehicle type/name
-    private Long vehicleId;
+    private String vehicleName;
 
     @NotNull(message = "City Id is required.")
     private Long cityId;
 
     @NotEmpty(message = "Dates is required.")
-    @JsonFormat(pattern = "yyyy/MM/dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private List<Date> dates;
 }

@@ -2,13 +2,10 @@ package com.congestion.calculator.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 
 @Entity
 @Table(name = "toll_fees")
-@NoArgsConstructor
 @Data
 public class TollFees implements Serializable {
 
@@ -34,4 +31,17 @@ public class TollFees implements Serializable {
 
     @Column(name = "rate", nullable = false)
     private double rate;
+
+    @Override
+    public String toString() {
+        return "TollFees{" +
+                "id=" + id +
+                ", city=" + city +
+                ", fromHour=" + fromHour +
+                ", fromMinute=" + fromMinute +
+                ", toHour=" + toHour +
+                ", toMinute=" + toMinute +
+                ", rate=" + rate +
+                '}';
+    }
 }

@@ -2,14 +2,11 @@ package com.congestion.calculator.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 import java.util.List;
 
 @Entity
 @Table(name = "city")
-@NoArgsConstructor
 @Data
 public class City implements Serializable {
 
@@ -28,4 +25,14 @@ public class City implements Serializable {
 
     @OneToMany(mappedBy = "city", fetch = FetchType.LAZY)
     private List<TollFees> tollFees;
+
+    @Override
+    public String toString() {
+        return "City{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", maxTaxableAmount=" + maxTaxableAmount +
+                ", singleChargeTime=" + singleChargeTime +
+                '}';
+    }
 }

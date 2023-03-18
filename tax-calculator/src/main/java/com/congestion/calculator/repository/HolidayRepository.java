@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface HolidayRepository extends JpaRepository<Holidays, Long> {
+    Holidays getHolidaysByMonthAndAndDay(Integer month, Integer day);
 }
