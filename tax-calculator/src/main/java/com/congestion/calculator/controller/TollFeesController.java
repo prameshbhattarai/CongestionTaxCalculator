@@ -18,7 +18,7 @@ public class TollFeesController {
     }
 
     @GetMapping("/{cityId}")
-    public Collection<TollFeesResponse> getTollFeesByCity(@PathVariable("cityId") Long cityId, @RequestParam(value = "vehicleId", required = false) Long vehicleId) {
-        return tollFeesService.getTollFeesByCityAndVehicle(cityId, vehicleId);
+    public Collection<TollFeesResponse> getTollFeesByCity(@PathVariable("cityId") Long cityId, @RequestParam(value = "vehicleName", required = false) String vehicleName) {
+        return tollFeesService.getTollFeesByCityAndVehicle(cityId, vehicleName);
     }
 }

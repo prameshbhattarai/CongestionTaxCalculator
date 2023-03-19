@@ -30,13 +30,13 @@ public class TollFeesService {
         this.vehiclesRepository = vehiclesRepository;
     }
 
-    public Collection<TollFeesResponse> getTollFeesByCityAndVehicle(Long cityId, Long vehicleId) {
+    public Collection<TollFeesResponse> getTollFeesByCityAndVehicle(Long cityId, String vehicleName) {
         var emptyResponse = new ArrayList<TollFeesResponse>();
 
-        if (vehicleId != null && vehicleId > 0) {
-            var vehicle = vehiclesRepository.findById(vehicleId);
+        if (vehicleName != null && !vehicleName.isEmpty()) {
+            var vehicle = vehiclesRepository.getVehicleByName(vehicleName);
             if (vehicle.isPresent() && vehicle.get().isTaxExempt()) {
-                log.info(String.format("TollFeesService::getTollFeesByCity: %s is tax free.", vehicle.get().getName()));
+                log.info(String.format("TollFeesService::getTollFeesByCity: %s is tax free.", vehicleName));
                 return emptyResponse;
             }
         }
