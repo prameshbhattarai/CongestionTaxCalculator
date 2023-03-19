@@ -19,6 +19,6 @@ public class CalculateTaxRequest {
     private Long cityId;
 
     @NotEmpty(message = "Dates is required.")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "CET", locale = "en_GB")
     private List<Date> dates;
 }

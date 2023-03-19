@@ -66,6 +66,6 @@ public class TollFeesService {
                         tollFee.getRate()
                 )
         ).sorted(Comparator.comparingInt(TollFeesResponse::fromHour))
-        .collect(Collectors.toList());
+                .collect(Collectors.toList());
     }
 }

@@ -54,25 +54,26 @@ public class TaxCalculatorService {
         // sort the dates from request
         calculateTaxRequest.setDates(calculateTaxRequest.getDates().stream().sorted().toList());
         Map<String, List<Date>> eachDayEntries = mapEachDayEntries(calculateTaxRequest.getDates());
-        return calculateTotalTax(eachDayEntries, city);
+        return calculateTotalTax(eachDayEntries, city, tollFees);
     }
 
-    private double calculateTotalTax(Map<String, List<Date>> eachDayEntries, City city) {
+    private double calculateTotalTax(Map<String, List<Date>> eachDayEntries, City city, Collection<TollFees> tollFees) {
+        System.out.println("city " + city);
         int totalTax = 0;
         for (Map.Entry<String, List<Date>> entry : eachDayEntries.entrySet()) {
-            double tax = calculateEachDayTax(entry.getValue(), city);
+            double tax = calculateEachDayTax(entry.getValue(), city, tollFees);
             System.out.println("each day tax " + entry.getKey() + "  value " + tax);
             totalTax += tax;
         }
         return totalTax;
     }
 
-    private double calculateEachDayTax(List<Date> dates, City city) {
+    private double calculateEachDayTax(List<Date> dates, City city, Collection<TollFees> tollFees) {
         if (dates.isEmpty()) return 0.0;
 
-        int tax = 0;
+        double tax = 0;
         Date entryTime = dates.get(0);
-        tax += getTollEntryFee(entryTime, city);
+        tax += getTollEntryFee(entryTime, tollFees);
 
         for (int i = 1; i < dates.size(); i++) {
             Date nextEntryTime = dates.get(i);
@@ -80,23 +81,24 @@ public class TaxCalculatorService {
             // if nextEntryTime is greater than SINGLE_CHARGE_TIME, then only we will add tax
             long diffInMinutes = (nextEntryTime.getTime() - entryTime.getTime()) / 1000 / 60;
             if (diffInMinutes > city.getSingleChargeTime()) {
-                tax += getTollEntryFee(nextEntryTime, city);
+                tax += getTollEntryFee(nextEntryTime, tollFees);
                 entryTime = nextEntryTime;
             }
 
             // if tax amount reach the max taxable amount per day
             // then return max taxable amount
             if (tax > city.getMaxTaxableAmount()) {
-                return  city.getMaxTaxableAmount();
+                return city.getMaxTaxableAmount();
             }
         }
         return tax;
     }
 
-    public double getTollEntryFee(Date date, City city) {
+    public double getTollEntryFee(Date date, Collection<TollFees> tollFees) {
         if (isTollFreeDate(date)) return 0;
 
-        Collection<TollFees> tollFees = tollFeesRepository.getTollFeesByCity_Id(city.getId());
+        int hour = date.getHours();
+        int minute = date.getMinutes();
 
         for (TollFees tollFee : tollFees) {
 
@@ -106,15 +108,17 @@ public class TaxCalculatorService {
             int toMinute = tollFee.getToMinute();
             double rate = tollFee.getRate();
 
-            Calendar fromDate = Calendar.getInstance();
-            fromDate.set(Calendar.HOUR, fromHour);
-            fromDate.set(Calendar.MINUTE, fromMinute);
+            Date fromDate = new Date();
+            fromDate.setHours(fromHour);
+            fromDate.setMinutes(fromMinute);
 
-            Calendar toDate = Calendar.getInstance();
-            toDate.set(Calendar.HOUR, toHour);
-            toDate.set(Calendar.MINUTE,toMinute);
+            Date toDate = new Date();
+            toDate.setHours(toHour);
+            toDate.setMinutes(toMinute);
 
-            Calendar entryDate = Calendar.getInstance();
+            Date entryDate = new Date();
+            entryDate.setHours(hour);
+            entryDate.setMinutes(minute);
 
             // entry dates calculation are inclusive
             if ((entryDate.after(fromDate) || entryDate.equals(fromDate)) &&
@@ -141,7 +145,7 @@ public class TaxCalculatorService {
         return (holidays != null);
     }
 
-     private Map<String, List<Date>> mapEachDayEntries(List<Date> dates) {
+    private Map<String, List<Date>> mapEachDayEntries(List<Date> dates) {
         var entryByDates = new HashMap<String, List<Date>>();
 
         dates.forEach((date) -> {
