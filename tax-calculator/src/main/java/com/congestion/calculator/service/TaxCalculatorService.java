@@ -58,11 +58,9 @@ public class TaxCalculatorService {
     }
 
     private double calculateTotalTax(Map<String, List<Date>> eachDayEntries, City city, Collection<TollFees> tollFees) {
-        System.out.println("city " + city);
         int totalTax = 0;
         for (Map.Entry<String, List<Date>> entry : eachDayEntries.entrySet()) {
             double tax = calculateEachDayTax(entry.getValue(), city, tollFees);
-            System.out.println("each day tax " + entry.getKey() + "  value " + tax);
             totalTax += tax;
         }
         return totalTax;
